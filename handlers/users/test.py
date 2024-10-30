@@ -8,7 +8,7 @@
 # from keyboards.inline.inline_buttons import *
 # from states.state import Xonachalar
 # # from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-
+#-1002148686406
 # ADMIN_ID = 6812498519
 
 # # Database setup

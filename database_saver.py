@@ -43,12 +43,10 @@
 import sqlite3
 
 
-
 def create_table():
     conn = sqlite3.connect("user_data.db")
     cursor = conn.cursor()
-    
-    # Создание таблицы sorov_table
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS sorov_table (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,8 +59,7 @@ def create_table():
             sabab TEXT NULL
         )
     ''')
-    
-    # Создание таблицы history_sorov
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS history_sorov (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,14 +72,14 @@ def create_table():
             sabab TEXT NULL
         )
     ''')
-    
+
     conn.commit()
     conn.close()
 
-# Call to ensure table is created
+
 create_table()
 
-# Function to insert new request into database
+
 def save_request_sorov_table(user_id, name, time, guruxlar, filial, sabab):
     conn = sqlite3.connect("user_data.db")
     cursor = conn.cursor()
@@ -93,7 +90,7 @@ def save_request_sorov_table(user_id, name, time, guruxlar, filial, sabab):
     conn.commit()
     conn.close()
 
-# Function to update the status
+
 def update_status(user_id, new_status):
     conn = sqlite3.connect("user_data.db")
     cursor = conn.cursor()
@@ -105,12 +102,10 @@ def update_status(user_id, new_status):
     conn.commit()
     conn.close()
 
-# Function to save request to history_sorov
+
 def save_request_to_history(user_id):
     conn = sqlite3.connect("user_data.db")
     cursor = conn.cursor()
-
-    # Получаем данные из sorov_table для указанного user_id
     cursor.execute('''
         SELECT name, time, guruxlar, status, filial, sabab
         FROM sorov_table
@@ -120,15 +115,36 @@ def save_request_to_history(user_id):
 
     if request:
         name, time, guruxlar, status, filial, sabab = request
-        
-        # Сохраняем в history_sorov
         cursor.execute('''
             INSERT INTO history_sorov (user_id, name, time, guruxlar, status, filial, sabab)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (user_id, name, time, guruxlar, status, filial, sabab))
-
-        # Удаляем запись из sorov_table
         cursor.execute('DELETE FROM sorov_table WHERE user_id = ?', (user_id,))
-    
+
     conn.commit()
     conn.close()
+
+
+def get_user_data(user_id):
+    conn = sqlite3.connect("user_data.db")
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT name, time, guruxlar, filial, sabab
+        FROM sorov_table
+        WHERE user_id = ?
+    ''', (user_id,))
+
+    result = cursor.fetchone()
+    conn.close()
+
+    if result:
+        name, time, guruxlar, filial, sabab = result
+        return {
+            "name": name,
+            "time": time,
+            "guruxlar": guruxlar,
+            "filial": filial,
+            "sabab": sabab
+        }
+    return None
