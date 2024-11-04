@@ -1,20 +1,21 @@
+import sqlite3
 from aiogram import types
 from aiogram.dispatcher.filters.builtin import CommandStart
 from aiogram.dispatcher import FSMContext
-from aiogram.types import ReplyKeyboardRemove
-
 from loader import dp, bot
-from keyboards.default.button import *
-from keyboards.inline.inline_buttons import tasdiqlash_buttons
+from aiogram.types import ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
+from keyboards.default.button import birinchi_button
 from states.state import Xonachalar
 from database_saver import save_request_sorov_table, update_status, save_request_to_history, get_user_data
 
-ADMIN_ID = 1091591701
-GROUP_ID = -4270625456
+ADMIN_ID = 730019457
+GROUP_ID = -1002336385026
 
+# Bot Handlers
 @dp.message_handler(commands='start')
 async def send_welcome(message: types.Message):
-    await message.answer("Assalomu Aleykum <b>MARS IT SCHOOL</b> ning botiga xush kelibsiz", reply_markup=birinchi_button)
+    await message.answer("Assalomu Aleykum <b>MARS IT SCHOOL</b> ning botiga xush kelibsiz",
+                         reply_markup=birinchi_button)
 
 @dp.message_handler(text="🤝 Ruxsat so`rash")
 async def ruxsat_sorash(message: types.Message):
@@ -55,57 +56,66 @@ async def submit_request(message: types.Message, state: FSMContext):
     sabab = message.text
     user_id = message.from_user.id
 
+    # Ma'lumotlarni bazaga saqlash
     save_request_sorov_table(user_id, name, time, guruxlar, filial, sabab)
-    await message.answer("☑️Sizning arizangiz qabul qilindi")
+    await message.answer("☑️ Sizning arizangiz qabul qilindi")
+
+    # Ruxsat so'rovini adminlarga yuborish
     await send_request_to_admin(user_id, name, time, guruxlar, filial, sabab)
+
     await state.finish()
 
 async def send_request_to_admin(user_id, name, time, guruxlar, filial, sabab):
-    message_for_admin = f"""
-Ruxsat so`rash bo'yicha!
-Telegram ID: {user_id}
-Ism: {name}
-Vaqt: {time}
-Guruhlar: {guruxlar}
-Filial: {filial}
-Sabab: {sabab}
-"""
-    await bot.send_message(ADMIN_ID, message_for_admin, reply_markup=tasdiqlash_buttons)
+    message_for_admin = (f"""
+Ruxsat so`rash boyicha!
+🆔 Telegram ID: {user_id}
+👤 Ism: {name}
+⏳ Vaqt: {time} 
+👥 Guruhlar: {guruxlar}
+📍 Filial: {filial}
+❓ Sabab: {sabab}
+""")
 
-@dp.callback_query_handler(text="tasdiqlash")
-async def approve_request(callback_query: types.CallbackQuery):
-    user_id = callback_query.from_user.id
-    await handle_approval(callback_query, user_id, approved=True)
+    # Inline tugmalarni yaratish
+    tasdiqlash_buttons = InlineKeyboardMarkup()
+    tasdiqlash_buttons.add(InlineKeyboardButton("✔️ Tasdiqlash", callback_data=f"approve_{user_id}"))
+    tasdiqlash_buttons.add(InlineKeyboardButton("❌ Rad etish", callback_data=f"reject_{user_id}"))
 
-@dp.callback_query_handler(text="rad_etish")
-async def reject_request(callback_query: types.CallbackQuery):
-    user_id = callback_query.from_user.id
-    await handle_approval(callback_query, user_id, approved=False)
+    # Xabarni adminlarga yuborish
+    await dp.bot.send_message(ADMIN_ID, message_for_admin, reply_markup=tasdiqlash_buttons)
 
-async def handle_approval(callback_query: types.CallbackQuery, user_id: int, approved: bool):
-    user_data = get_user_data(user_id)
+@dp.callback_query_handler(lambda c: c.data.startswith('approve_') or c.data.startswith('reject_'))
+async def process_callback_approval(callback_query: types.CallbackQuery):
+    user_id = int(callback_query.data.split('_')[1])
+    status_text = ""
+    
 
-    if approved:
-        status_text = "TASDIQLANGAN"
-        await callback_query.answer("Ruxsat berildi")
-        await bot.send_message(user_id, "Ruxsat berildi.")
-        update_status(user_id, "Ruxsat berildi")
-    else:
-        status_text = "RAD ETILGAN"
-        await callback_query.answer("Ruxsat rad etildi")
-        await bot.send_message(user_id, "Ruxsat rad etildi.")
-        update_status(user_id, "Ruxsat rad etildi")
+    if callback_query.data.startswith('approve_'):
+        status_text = "Ruxsat berildi"
 
-    save_request_to_history(user_id)
-
-    message_for_group = f"""
+        # Foydalanuvchi ma'lumotlarini bazadan olish
+        user_data = get_user_data(user_id)  # Bazadan foydalanuvchi ma'lumotlarini olish
+        if user_data:
+            message_for_group = f"""
 <b>{status_text}</b>
 Ruxsat so'rov holati:
-Telegram ID: {user_id}
-Ism: {user_data['name']}
-Vaqt: {user_data['time']}
-Guruhlar: {user_data['guruxlar']}
-Filial: {user_data['filial']}
-Sabab: {user_data['sabab']}
+🆔 Telegram ID: {user_id}
+👤 Ism: {user_data['name']}
+⏳ Vaqt: {user_data['time']}
+👥 Guruhlar: {user_data['guruxlar']}
+📍 Filial: {user_data['filial']}
+❓ Sabab: {user_data['sabab']}
 """
-    await bot.send_message(GROUP_ID, message_for_group, parse_mode="HTML")
+            await bot.send_message(GROUP_ID, message_for_group, parse_mode="HTML")
+    else:
+        status_text = "Ruxsat rad etildi"
+
+    # Foydalanuvchiga javob yuborish
+    await callback_query.answer(status_text)
+    await dp.bot.send_message(user_id, status_text)
+
+    # Holatni sorov_table da yangilash
+    update_status(user_id, status_text)
+
+    # Ariza ma'lumotlarini history_sorov ga ko'chirish va sorov_table dan o'chirish
+    save_request_to_history(user_id)
