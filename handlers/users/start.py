@@ -11,6 +11,9 @@ from database_saver import save_request_sorov_table, update_status, save_request
 ADMIN_ID = 309132375
 GROUP_ID = -1002479415003
 
+
+#salom
+
 # Bot Handlers
 @dp.message_handler(commands='start')
 async def send_welcome(message: types.Message):
