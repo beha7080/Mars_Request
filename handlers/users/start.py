@@ -8,8 +8,8 @@ from keyboards.default.button import birinchi_button
 from states.state import Xonachalar
 from database_saver import save_request_sorov_table, update_status, save_request_to_history, get_user_data
 
-ADMIN_ID = 309132375
-GROUP_ID = -1002479415003
+ADMIN_ID = "YOUR_ADMIN_ID"
+GROUP_ID = "YOUR_GROUP"
 
 
 #salom
